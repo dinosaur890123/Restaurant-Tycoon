@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant tycoon</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Restaurant Tycoon</h1>
+    <div id="hud">
+        <div class="stat-box">Cash: $<span id="money">0</span></div>
+        <div class="stat-box" id="message-box">Welcome, buy a table to start.</div>
+        <div class="stat-box">Queue: <span id="queue-count">0</span></div>
+    </div>
+    <div id="game-area">
+        <div id="kitchen">
+            <div class="kitchen-label">Kitchen</div>
+            <div id="stove"></div>
+        </div>
+    </div>
+    <div id="controls">
+        <button class="button-buy" id="button-buy-table" onclick="buyTable()">Buy Table ($100)</button>
+        <button onclick="resetGame()" style="background-color: #c0392b; margin-left: auto;">Reset game</button>
+    </div>
+</body>
+</html>
