@@ -96,5 +96,110 @@ function spawnCustomer(table) {
     bubble.textContent = "Order!";
     element.appendChild(bubble);
     gameArea.appendChild(element);
+    customer.element = element;
+    customer.bubble = bubble;
+    state.customers.push(customer);
+    setTimeout(() => {
+        setCustomerState(customer, 'ready_to_order');
+    }, 1000);
+}
+function setCustomerState(cust, status) {
+    customer.status = status;
+    const element = cust.element;
+    if (status === 'ready_to_order') {
+        customer.bubble.textContent = "Order?";
+        element.classList.add('needs-attention');
+        element.style.backgroundColor = '#e74c3c';
+    }
+    else if (status === 'waiting_food') {
+        customer.bubble.textContent = "Waiting...";
+        element.classList.remove('needs-attention');
+        element.style.backgroundColor = '#3498db';
+    }
+    else if (status === 'eating') {
+        customer.bubble.textContent = "yum!";
+        element.style.backgroundColor = '#f1c40f';
+        setTimeout(() => {
+            setCustomerState(cust, 'ready_to_pay');
+        }, 4000);
+    }
+    else if (status === 'ready_to_pay') {
+        customer.bubble.textContent = "Pay $";
+        element.classList.add('needs-attention');
+        element.style.backgroundColor = '#2ecc71';
+    }
+}
+function handleCustomerClick(customer) {
+    if (customer.status === 'ready_to_order') {
+        sendOrderToKitchen(customer);
+        setCustomerState(customer, 'waiting_food');
+        showMessage("Order taken, cooking in kitchen")
+    }
+    else if (customer.status === 'ready_to_serve') {
+        serveFood(customer);
+    }
+    else if (cust.status === 'ready_to_pay') {
+        collectMoney(cust);
+    }
+}
+function sendOrderToKitchen(customer) {
+    const orderElement = document.createElement('div');
+    orderElement.className = 'kitchen-order';
+    orderEl.innerHTML = `Order #${customer.id.split('-')[1]} <div class="progress-bar"></div>`;
+    elementStove.appendChild(orderElement);
+    const bar = orderElement.querySelector('.progress-bar');
     
+    setTimeout(() => {
+        bar.style.width = '100%';
+        bar.style.transition = 'width 3s linear';
+    }, 50);
+    
+    setTimeout(() => {
+        orderElement.classList.add('order-ready');
+        orderElement.innerHTML = "SERVE!";
+        orderElement.onclick = () => {
+            serveFood(customer);
+            orderElement.remove();
+        };
+        showMessage("Food ready, click kitchen item to serve")
+    }, 3050);
+}
+function serveFood(customer) {
+    if (customer.status !== 'waiting_food') return;
+    setCustomerState(customer, 'eating');
+    showMessage("Customer served.")
+}
+function collectMoney(customer) {
+    customer.element.remove();
+    const table = state.tables.find(t => t.id === customer.tableId);
+    if (table) table.occupiedBy = null;
+    state.customers = state.customers.filter(c => c.id !== customer.id);
+    const amount = 20;
+    state.money += amount;
+    spawnFloater(customer.element.style.left, customer.element.style.top, `+$${amount}`);
+    updateUI();
+    showMessage("Money collected!");
+}
+function spawnFloater(x, y, text) {
+    const f = document.createElement('div');
+    f.className = 'floater';
+    f.style.left = x;
+    f.style.top = y;
+    f.textContent = text;
+    gameArea.appendChild(f);
+    setTimeout(() => f.remove(), 1000);
+}
+function showMessage(text) {
+    message.textContent = text;
+}
+function updateUI() {
+    money.textContent = state.money;
+    queue.textContent = state.customerQueue;
+    if (state.money < 100) {
+        buttonBuyTable.style.opacity = "0.5";
+        buttonBuyTable.style.cursor = "not-allowed";
+    } else {
+        buttonBuyTable.style.opacity = "1";
+        buttonBuyTable.style.cursor = "pointer";
+    }
 }
