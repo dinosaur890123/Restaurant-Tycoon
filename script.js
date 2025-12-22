@@ -104,7 +104,7 @@ function spawnCustomer(table) {
     }, 1000);
 }
 function setCustomerState(customer, status) {
-    cus.status = status;
+    customer.status = status;
     const element = customer.element;
     if (status === 'ready_to_order') {
         customer.bubble.textContent = "Order?";
