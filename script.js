@@ -67,7 +67,7 @@ function buyTable() {
         showMessage("Not enough cash!")
     }
 }
-function createTableElement() {
+function createTableElement(table) {
     const element = document.createElement('div');
     element.className = 'table';
     element.style.left = tableData.x + 'px';
@@ -203,3 +203,4 @@ function updateUI() {
         buttonBuyTable.style.cursor = "pointer";
     }
 }
+init();
