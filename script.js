@@ -103,9 +103,9 @@ function spawnCustomer(table) {
         setCustomerState(customer, 'ready_to_order');
     }, 1000);
 }
-function setCustomerState(cust, status) {
-    customer.status = status;
-    const element = cust.element;
+function setCustomerState(customer, status) {
+    cus.status = status;
+    const element = customer.element;
     if (status === 'ready_to_order') {
         customer.bubble.textContent = "Order?";
         element.classList.add('needs-attention');
@@ -138,7 +138,7 @@ function handleCustomerClick(customer) {
     else if (customer.status === 'ready_to_serve') {
         serveFood(customer);
     }
-    else if (cust.status === 'ready_to_pay') {
+    else if (customer.status === 'ready_to_pay') {
         collectMoney(cust);
     }
 }
