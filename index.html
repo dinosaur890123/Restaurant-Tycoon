@@ -18,9 +18,24 @@
             <div class="kitchen-label">Kitchen</div>
             <div id="stove"></div>
         </div>
+        <div id="staff-area">
+            <div>Waiters: <span id="waiter-count">0</span></div>
+            <div>Chefs: <span id="chef-count">0</span></div>
+        </div>
     </div>
     <div id="controls">
-        <button class="button-buy" id="button-buy-table" onclick="buyTable()">Buy Table ($100)</button>
+        <div class="control-group">
+            <button class="button-buy" id="button-buy-table" onclick="buyTable()">Buy Table ($100)</button>
+        </div>
+        <div classs="control-group">
+            <button class="button-hire" id="button-hire-waiter" onclick="hireWaiter()">Hire Waiter ($500)</button>
+            <button class="button-hire" id="button-hire-chef" onclick="hireChef()">Hire Chef ($500)</button>
+        </div>
+        <div class="menu-legend">
+            <span>Salad ($15)</span>
+            <span>Burger ($30)</span>
+            <span>Steak ($50)</span>
+        </div>
         <button onclick="resetGame()" style="background-color: #c0392b; margin-left: auto;">Reset game</button>
     </div>
 </body>
