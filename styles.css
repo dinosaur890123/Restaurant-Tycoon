@@ -62,3 +62,79 @@ h1 {
     margin-bottom: 20px;
     text-align: center;
 }
+.table {
+    position: absolute;
+    width: 80px;
+    height: 60px;
+    background-color: #5d4037;
+    border-radius: 4px;
+    border: 2px solid #3e2723;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: rgba(255,255,255,0.3);
+    font-size: 12px;
+}
+.customer {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    background-color: #3498db;
+    border-radius: 50%;
+    border: 2px solid #2980b9;
+    z-index: 10;
+    transition: top 0.5s ease, left 0.5s ease;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.status-bubble {
+    position: absolute;
+    top: -25px;
+    left: -10px;
+    background: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    border: 1px solid #999;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    font-weight: bold;
+    color: #303030;
+}
+.customer.needs-attention .status-bubble {
+    opacity: 1;
+    animation: bounce 1s infinite;
+}
+@keyframes bounce {
+    0%, 100% {transform: translateY(0);}
+    50% {transform: translateY(-3px);}
+}
+#controls {
+    width: 800px;
+    background: white;
+    padding: 15px;
+    border: 1px solid #cecccc;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    gap: 10px;
+    box-sizing: border-box;
+}
+button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+button:hover {
+    background-color: #2980b9;
+}
