@@ -67,7 +67,7 @@ function buyTable() {
         showMessage("Not enough cash!")
     }
 }
-function createTableElement(table) {
+function createTableElement(tableData) {
     const element = document.createElement('div');
     element.className = 'table';
     element.style.left = tableData.x + 'px';
