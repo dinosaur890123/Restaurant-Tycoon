@@ -1,5 +1,6 @@
 const GAME_WIDTH = 650;
 const GAME_HEIGHT = 500;
+const STORAGE_KEY = 'restaurant_tycoon_save_v1';
 const RECIPES = {
     salad: {
         id: 'salad',
@@ -34,6 +35,11 @@ let state = {
         waiters: 0,
         chefs: 0
     },
+    upgrades: {
+        marketing: false,
+        fastCook: false,
+        highPrice: false
+    },
     lastStaffAction: 0
 };
 const gameArea = document.getElementById('game-area');
@@ -46,6 +52,9 @@ const buttonHireWaiter = document.getElementById('btn-hire-waiter');
 const buttonHireChef = document.getElementById('button-hire-chef');
 const waiterCount = document.getElementById('waiter-count');
 const ChefCount = document.getElementById('chef-count');
+const buttonBuyUpgradeMarketing = document.getElementById('button-upgrade-marketing');
+const buttonBuyUpgradeSpeed = document.getElementById('button-upgrade-speed');
+const buttonBuyUpgradeProfit = document.getElementById('button-upgrade-profit')
 function init() {
     updateUI();
     gameLoop();
@@ -54,8 +63,9 @@ function resetGame() {
     location.reload();
 }
 function gameLoop(timestamp) {
+    const spawnRate = state.upgrades.marketing ? 1500 : 3000;
     if (timestamp - state.lastSpawn > 3000) {
-        if (Math.random() > 0.3 && state.customerQueue < 5) {
+        if (Math.random() > 0.3 && state.customerQueue < 10) {
             state.customerQueue++;
             updateUI();
         }
@@ -79,6 +89,23 @@ function processQueue() {
     }
 }
 
+function buyUpgrade(type) {
+    let cost = 0;
+    let name = "";
+    if (type === 'marketing') {cost = 600; name = "Marketing";}
+    else if (type === 'fastCook') {cost = 800; name = "Faster cooking";}
+    else if (type === 'highPrice') {cost = 1000; name = "Premium Menu";}
+    if (state.money >= cost && !state.upgrades[type]) {
+        state.money -= cost;
+        state.upgrades[type] = true;
+        showMessage(`${name} Purchased!`);
+        updateUI();
+    } else if (state.upgrades[type]) {
+        showMessage("You already own this!");
+    } else {
+        showMessage(`Need $${cost} for ${name}!`)
+    }
+}
 function hireWaiter() {
     if (state.money >= 500) {
         state.money -= 500;
@@ -148,11 +175,11 @@ function createEffect(x, y, emoji) {
 }
 function buyTable() {
     if (state.money >= 100) {
-        const col = state.tables.length % 3;
-        const row = Math.floor(state.tables.length / 3);
+        const col = state.tables.length % 4;
+        const row = Math.floor(state.tables.length / 4);
         const x = 50 + (col * 150);
         const y = 50 + (row * 120);
-        if (state.tables.length < 9) {
+        if (state.tables.length < 12) {
             const table = {
                 id: `table-${state.idCounter++}`,
                 x: x,
@@ -258,10 +285,13 @@ function sendOrderToKitchen(customer) {
     orderElement.style.borderLeft = `5px solid ${customer.order.color}`;
     stove.appendChild(orderElement);
     const bar = orderElement.querySelector('.progress-bar');
+    bar.style.backgroundColor = customer.order.color;
+    const baseTime = customer.order.time;
+    const cookTime = state.upgrades.fastCook ? baseTime / 2 : baseTime;
     
     setTimeout(() => {
         bar.style.width = '100%';
-        bar.style.transition = `width ${customer.order.time / 1000}s linear`;
+        bar.style.transition = `width ${cookTime / 1000}s linear`;
     }, 50);
     
     setTimeout(() => {
@@ -285,11 +315,14 @@ function collectMoney(customer) {
     const table = state.tables.find(t => t.id === customer.tableId);
     if (table) table.occupiedBy = null;
     state.customers = state.customers.filter(c => c.id !== customer.id);
-    const amount = customer.order.price;
+    let amount = customer.order.price;
+    if (state.upgrades.highPrice) {
+        amount = Math.floor(amount * 1.5);
+    }
     state.money += amount;
     spawnFloater(customer.element.style.left, customer.element.style.top, `+$${amount}`);
     updateUI();
-    showMessage("Money collected!");
+    showMessage(`Collected $${amount}`);
 }
 function spawnFloater(x, y, text) {
     const f = document.createElement('div');
@@ -309,10 +342,19 @@ function updateUI() {
     waiterCount.textContent = state.staff.waiters;
     chefCount.textContent = state.staff.chefs;
     buttonBuyTable.disabled = state.money < 100;
-    buttonBuyTable.style.opacity = state.money < 100 ? 0.5 : 1;
     buttonHireWaiter.disabled = state.money < 500;
-    buttonHireWaiter.style.opacity = state.money < 500 ? 0.5 : 1;
     buttonHireChef.disabled = state.money < 500;
-    buttonHireChef.style.opacity = state.money < 500 ? 0.5 : 1;
+    updateUpgradeButton(buttonBuyUpgradeMarketing, 'marketing', 600);
+    updateUpgradeButton(buttonBuyUpgradeSpeed, 'fastCook', 800);
+    updateUpgradeButton(buttonBuyUpgradeProfit, 'highPrice', 1000);
+}
+function updateUpgradeButton(button, type, cost) {
+    if (state.upgrades[type]) {
+        button.disabled = true;
+        button.classList.add('upgrade-owned');
+        button.textContent = "OWNED";
+    } else {
+        button.disabled = state.money < cost;
+    }
 }
 init();

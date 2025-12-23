@@ -24,12 +24,21 @@
         </div>
     </div>
     <div id="controls">
-        <div class="control-group">
+        <div class="control-column">
+            <h3>Actions</h3>
             <button class="button-buy" id="button-buy-table" onclick="buyTable()">Buy Table ($100)</button>
+            <div class="button-row">
+                <button class="button-hire" id="button-hire-waiter" onclick="hireWaiter()">+ Waiter ($500)</button>
+                <button class="button-hire" id="button-hire-chef" onclick="hireChef()">+ Chef ($500)</button>
+            </div>
         </div>
-        <div classs="control-group">
-            <button class="button-hire" id="button-hire-waiter" onclick="hireWaiter()">Hire Waiter ($500)</button>
-            <button class="button-hire" id="button-hire-chef" onclick="hireChef()">Hire Chef ($500)</button>
+        <div class="control-column">
+            <h3>Upgrades Shop</h3>
+            <div class="button-row">
+                <button class="button-upgrade" id="button-upgrade-marketing" onclick="buyUpgrade('marketing')">Marketing ($600)</button>
+                <button class="button-upgrade" id="button-upgrade-speed" onclick="buyUpgrade('fastCook')">Faster cooking ($800)</button>
+                <button class="button-upgrade" id="button-upgrade-profit" onclick="buyUpgrade('highPrice')">Premium menu ($1k)</button>
+            </div>
         </div>
         <div class="menu-legend">
             <span>Salad ($15)</span>

@@ -13,7 +13,7 @@ h1 {
     margin-bottom: 10px;
 }
 #hud {
-    width: 800px;
+    width: 850px;
     background: #424242;
     color: white;
     padding: 15px;
@@ -35,7 +35,7 @@ h1 {
 }
 #game-area {
     position: relative;
-    width: 800px;
+    width: 850px;
     height: 500px;
     background-color: #eecfa1;
     border: 4px solid #8d6e63;
@@ -46,7 +46,7 @@ h1 {
     position: absolute;
     top: 0;
     right: 0;
-    width: 150px;
+    width: 170px;
     height: 100%;
     background-color: #bdc3c7;
     border-left: 4px solid #7f8c8d;
@@ -91,19 +91,20 @@ h1 {
 }
 .status-bubble {
     position: absolute;
-    top: -25px;
-    left: -10px;
+    top: -30px;
+    left: -15px;
     background: white;
-    padding: 2px 6px;
+    padding: 3px 8px;
     border-radius: 10px;
-    font-size: 10px;
-    border: 1px solid #999;
+    font-size: 11px;
+    border: 2px solid #999;
     white-space: nowrap;
     opacity: 0;
     transition: opacity 0.2s;
     pointer-events: none;
     font-weight: bold;
     color: #303030;
+    z-index: 100;
 }
 .customer.needs-attention .status-bubble {
     opacity: 1;
@@ -114,29 +115,49 @@ h1 {
     50% {transform: translateY(-3px);}
 }
 #controls {
-    width: 800px;
+    width: 850px;
     background: white;
     padding: 15px;
     border: 1px solid #cecccc;
     border-top: none;
     border-radius: 0 0 8px 8px;
     display: flex;
-    gap: 10px;
+    gap: 20px;
+    align-items: flex-start;
     box-sizing: border-box;
+}
+.control-column {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.control-column h3 {
+    margin: 0 0 5px 0;
+    font-size: 14px;
+    color: #4a4747;
+    text-transform: uppercase;
+}
+.button-row {
+    display: flex;
+    gap: 5px;
 }
 button {
     background-color: #3498db;
     color: white;
     border: none;
-    padding: 10px 20px;
+    padding: 8px 12px;
     border-radius: 4px;
     font-family: inherit;
     font-weight: bold;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s;
+    font-size: 12px;
 }
 button:hover {
     background-color: #2980b9;
+}
+button:active {
+    transform: translateY(1px);
 }
 button:disabled {
     background-color: #95a5a6;
@@ -147,6 +168,20 @@ button:disabled {
 }
 .button-buy:hover {
     background-color: #2ecc71;
+}
+.button-upgrade {
+    background-color: #f39c12; 
+    border-bottom: 3px solid #d35400;
+}
+.button-upgrade:disabled {
+    border-bottom: 3px solid #95a5a6;
+    background-color: #bdc3c7;
+}
+.upgrade-owned {
+    background-color: #2c3e50 !important;
+    border-bottom: 3px solid #34495e !important;
+    color: #7f8c8d;
+    cursor: default;
 }
 .floater {
     position: absolute;
@@ -161,17 +196,20 @@ button:disabled {
     100% {transform: translateY(-30px); opacity: 0;}
 }
 .kitchen-order {
-    width: 80%;
-    height: 30px;
+    width: 90%;
+    height: 36px;
     background: white;
     border: 1px solid #cdc8c8;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 10px;
+    font-size: 11px;
     cursor: pointer;
     position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 .progress-bar {
     position: absolute;
@@ -180,7 +218,6 @@ button:disabled {
     height: 3px;
     background: #e74c3c;
     width: 0%;
-    transition: width 0.1s linear;
 }
 .order-ready {
     background-color: #2ecc71;
