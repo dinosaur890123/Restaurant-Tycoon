@@ -56,11 +56,65 @@ const buttonBuyUpgradeMarketing = document.getElementById('button-upgrade-market
 const buttonBuyUpgradeSpeed = document.getElementById('button-upgrade-speed');
 const buttonBuyUpgradeProfit = document.getElementById('button-upgrade-profit')
 function init() {
-    updateUI();
+    if (!loadGame()) {
+        updateUI();
+    }
     gameLoop();
+    setInterval(saveGame, 10000);
 }
 function resetGame() {
-    location.reload();
+    if (confirm("Are you sure? This will delete your save file.")) {
+        localStorage.removeItem(STORAGE_KEY);
+        location.reload();
+    }
+}
+function saveGame() {
+    const saveState = {
+        money: state.money,
+        idCounter: state.idCounter,
+        staff: state.staff,
+        upgrades: state.upgrades,
+        tables: state.tables.map(t => ({
+            id: t.id,
+            x: t.x,
+            y: t.y
+        }))
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saveState));
+    const originalText = message.textContent;
+    showMessage("Game saved");
+    setTimeout(() => {
+        if (message.textContent === "Game Saved!") showMessage(originalText);
+    }, 2000);
+}
+function loadGame() {
+    const savedJSON = localStorage.getItem(STORAGE_KEY);
+    if (!savedJSON) return false;
+    try {
+        const savedState = JSON.parse(savedJSON);
+        state.money = savedState.money;
+        state.idCounter = savedState.idCounter;
+        state.staff = savedState.staff;
+        state.upgrades = savedState.upgrades;
+        state.tables = [];
+        savedState.tables.forEach(tableData => {
+            const table = {
+                id: tableData.id,
+                x: tableData.x,
+                y: tableData.y,
+                occupiedBy: null,
+                element: null
+            };
+            createTableElement(table);
+            state.tables.push(table);
+        });
+        showMessage("Welcome back, game loaded");
+        updateUI();
+        return true;
+    } catch (e) {
+        console.error("Save file corrupted", e);
+        return false;
+    }
 }
 function gameLoop(timestamp) {
     const spawnRate = state.upgrades.marketing ? 1500 : 3000;
@@ -191,6 +245,7 @@ function buyTable() {
             state.tables.push(table);
             updateUI();
             showMessage("Table purchased! Waiting for customers...");
+            saveGame();
         } else {
             showMessage("Restaurant full, no more space.")
         }
