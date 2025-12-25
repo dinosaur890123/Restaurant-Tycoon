@@ -11,7 +11,7 @@
     <div id="hud">
         <div class="stat-box">Cash: $<span id="money">0</span></div>
         <div class="stat-box" id="message-box">Welcome, buy a table to start.</div>
-        <div class="stat-box">Queue: <span id="queue-count">0</span></div>
+        <div class="stat-box">Multiplier: x<span id="prestige-mult">1.0</span></div>
     </div>
     <div id="game-area">
         <div id="kitchen">
@@ -33,6 +33,12 @@
             </div>
         </div>
         <div class="control-column">
+            <h3>Pantry (Buy x5)</h3>
+            <button class="button-stock" id="button-buy-salad" onclick="buyStock('salad')">Salad ($20)</button>
+            <button class="button-stock" id="button-buy-burger" onclick="buyStock('burger')">Burger ($40)</button>
+            <button class="button-stock" id="button-buy-steak" onclick="buyStock('steak')">Steak ($80)</button>
+        </div>
+        <div class="control-column">
             <h3>Upgrades Shop</h3>
             <div class="button-row">
                 <button class="button-upgrade" id="button-upgrade-marketing" onclick="buyUpgrade('marketing')">Marketing ($600)</button>
@@ -40,12 +46,12 @@
                 <button class="button-upgrade" id="button-upgrade-profit" onclick="buyUpgrade('highPrice')">Premium menu ($1k)</button>
             </div>
         </div>
-        <div class="menu-legend">
-            <span>Salad ($15)</span>
-            <span>Burger ($30)</span>
-            <span>Steak ($50)</span>
+        <div class="control-column" style="margin-left: auto; align-items: flex-end;">
+            <div class="button-row" style="margin-top: 25px;">
+                <button onclick="saveGame()" style="background-color: #8e44ad;">Save</button>
+                <button onclick="resetGame()" style="background-color: #c0392b;">Reset</button>
+            </div>
         </div>
-        <button onclick="resetGame()" style="background-color: #c0392b; margin-left: auto;">Reset game</button>
     </div>
 </body>
 <script src="script.js"></script>

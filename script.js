@@ -1,6 +1,6 @@
 const GAME_WIDTH = 650;
 const GAME_HEIGHT = 500;
-const STORAGE_KEY = 'restaurant_tycoon_save_v1';
+const STORAGE_KEY = 'restaurant_tycoon_save_v2';
 const RECIPES = {
     salad: {
         id: 'salad',
@@ -25,7 +25,7 @@ const RECIPES = {
     }
 };
 let state = {
-    money: 150,
+    money: 200,
     tables: [],
     customers: [],
     customerQueue: 0,
@@ -40,8 +40,19 @@ let state = {
         fastCook: false,
         highPrice: false
     },
+    inventory: {
+        salad: 10,
+        burger: 10,
+        steak: 10
+    },
     lastStaffAction: 0
 };
+const STOCK_PRICES = {
+    salad: 20,
+    burger: 40,
+    steak: 80
+};
+const STOCK_PACK_SIZE = 5;
 const gameArea = document.getElementById('game-area');
 const money = document.getElementById('money');
 const message = document.getElementById('message-box');
@@ -55,6 +66,12 @@ const ChefCount = document.getElementById('chef-count');
 const buttonBuyUpgradeMarketing = document.getElementById('button-upgrade-marketing');
 const buttonBuyUpgradeSpeed = document.getElementById('button-upgrade-speed');
 const buttonBuyUpgradeProfit = document.getElementById('button-upgrade-profit')
+const buttonBuySalad = document.getElementById('button-buy-salad');
+const buttonBuyBurger = document.getElementById('button-buy-burger');
+const buttonBuySteak = document.getElementById('button-buy-steak');
+const stockSalad = document.getElementById('stock-salad');
+const stockBurger = document.getElementById('stock-burger');
+const stockSteak = document.getElementById('stock-steak');
 function init() {
     if (!loadGame()) {
         updateUI();
@@ -74,6 +91,7 @@ function saveGame() {
         idCounter: state.idCounter,
         staff: state.staff,
         upgrades: state.upgrades,
+        inventory: state.inventory,
         tables: state.tables.map(t => ({
             id: t.id,
             x: t.x,
@@ -96,6 +114,7 @@ function loadGame() {
         state.idCounter = savedState.idCounter;
         state.staff = savedState.staff;
         state.upgrades = savedState.upgrades;
+        state.inventory = savedState.inventory || {salad: 10, burger: 10, steak: 10};
         state.tables = [];
         savedState.tables.forEach(tableData => {
             const table = {
@@ -142,7 +161,30 @@ function processQueue() {
         }
     }
 }
-
+function buyStock() {
+    const price = STOCK_PRICES[type];
+    if (state.money >= price) {
+        state.money -= price;
+        state.inventory[type] += STOCK_PACK_SIZE;
+        showMessage(`Bought ${STOCK_PACK_SIZE} ${type}!`);
+        updateUI();
+        saveGame();
+    } else {
+        showMessage(`Need $${price} for ${type}!`)
+    }
+}
+function updateStockDisplay() {
+    stockSalad.textContent = `🥗 ${state.inventory.salad}`;
+    stockBurger.textContent = `🍔 ${state.inventory.burger}`;
+    stockSteak.textContent = `🥩 ${state.inventory.steak}`;
+    checkLowStock(stockSalad, state.inventory.salad);
+    checkLowStock(stockBurger, state.inventory.burger);
+    checkLowStock(stockSteak, state.inventory.steak);
+}
+function checkLowStock(element, amount) {
+    if (amount <= 2) element.classList.add('stock-low');
+    else element.classList.remove('stock-low');
+}
 function buyUpgrade(type) {
     let cost = 0;
     let name = "";
@@ -191,9 +233,12 @@ function runStaffLogic() {
                 waiterMoves--;
                 createEffect(customer.element.style.left, customer.element.style.top, "🤵")
             } else if (customer.status === 'ready_to_order') {
-                handleCustomerClick(customer);
-                waiterMoves--;
-                createEffect(customer.element.style.left, customer.element.style.top, "📝");
+                const stockType = customer.order.stockKey;
+                if (state.inventory[stockType] > 0) {
+                    handleCustomerClick(cust);
+                    waiterMoves--;
+                    createEffect(cust.element.style.left, cust.element.style.top, "📝");
+                }
             }
         }
     }
@@ -325,9 +370,16 @@ function setCustomerState(customer, status) {
 }
 function handleCustomerClick(customer) {
     if (customer.status === 'ready_to_order') {
-        sendOrderToKitchen(customer);
-        setCustomerState(customer, 'waiting_food');
-        showMessage(`Ordering ${customer.order.name}...`)
+        const stockType = customer.order.stockKey;
+        if (state.inventory[stockType] > 0) {
+            state.inventory[stockType]--;
+            sendOrderToKitchen(customer);
+            setCustomerState(customer, 'waiting_food');
+            showMessage(`Ordering ${customer.order.name}...`);
+            updateUI();
+        } else {
+            showMessage(`Out of ${customer.order.name}! Buy Stock!`)
+        }
     }
     else if (customer.status === 'ready_to_pay') {
         collectMoney(cust);

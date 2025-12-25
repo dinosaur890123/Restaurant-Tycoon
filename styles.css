@@ -56,6 +56,30 @@ h1 {
     padding-top: 20px;
     z-index: 1;
 }
+.kitchen-stock {
+    width: 90%;
+    background: #ecf0f1;
+    padding: 5px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border: 1px solid #bdc3c7;
+}
+.stock-item {
+    font-size: 12px;
+    font-weight: bold;
+    color: #353434;
+    margin: 2px 0;
+    display: flex;
+    justify-content: space-between;
+}
+.stock-low {
+    color: #e74c3c;
+    animation: flashRed 1s infinite;
+}
+@keyframes flashRed {
+    0%, 100% {color: #e74c3c;}
+    50% {color: #1f1e1e;}
+}
 .kitchen-label {
     font-weight: bold;
     color: #555555;
