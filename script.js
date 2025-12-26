@@ -1,29 +1,50 @@
 const GAME_WIDTH = 650;
 const GAME_HEIGHT = 500;
 const STORAGE_KEY = 'restaurant_tycoon_save_v2';
-const RECIPES = {
-    salad: {
-        id: 'salad',
-        name: 'salad',
-        price: 15,
-        time: 2000,
-        color: "#2ecc71"
+const THEMES = [
+    {
+        name: "Local bistro",
+        background: "#eecfa1",
+        border: "#8d6e63",
+        items: [
+            {id: 'salad', name: "Salad", price: 15, time: 2000, color: "#2ecc71"},
+            {id: 'burger', name: "Burger", price: 30, time: 5000, color: "#d35400"},
+            {id: 'steak', name: "Steak", price: 50, time: 8000, color: "#c0392b"}
+        ]
     },
-    burger: {
-        id: 'burger',
-        name: "Burger", 
-        price: 30, 
-        time: 5000,
-        color: "#d35400"
+    {
+        name: "Downtown Pizza",
+        background: "#fdedec", 
+        border: "#e74c3c",
+        items: [
+            {id: 'salad', name: "Knots", price: 20, time: 2000, color: "#f1c40f"},
+            {id: 'burger', name: "Slice", price: 40, time: 5000, color: "#e67e22"},
+            {id: 'steak', name: "Deep Dish", price: 70, time: 8000, color: "#c0392b"}
+        ]
     },
-    steak: {
-        id: 'steak',
-        name: "Steak",
-        price: 50, 
-        time: 8000, 
-        color: "#c0392b"
+    {
+        name: "Royal Steakhouse",
+        bg: "#2c3e50",
+        border: "#f1c40f",
+        items: [
+            {id: 'salad', name: "Bisque", price: 50, time: 2000, color: "#ecf0f1"},
+            {id: 'burger', name: "Tartare", price: 100, time: 5000, color: "#e74c3c"},
+            {id: 'steak', name: "Wagyu", price: 200, time: 8000, color: "#f39c12"}
+        ]
+    },
+    {
+        name: "Cyber Cafe 2077",
+        bg: "#000000",
+        border: "#00ffcc",
+        items: [
+            {id: 'salad', name: "Data Chip", price: 100, time: 2000, color: "#00ffcc"},
+            {id: 'burger', name: "Nutri-Paste", price: 250, time: 5000, color: "#ff00ff"},
+            {id: 'steak', name: "Plasma Rib", price: 500, time: 8000, color: "#ffff00"}
+        ]
     }
-};
+]
+const STOCK_PRICES = {salad: 20, burger: 40, steak: 80};
+const STOCK_PACK_SIZE = 5;
 let state = {
     money: 200,
     tables: [],
@@ -47,12 +68,6 @@ let state = {
     },
     lastStaffAction: 0
 };
-const STOCK_PRICES = {
-    salad: 20,
-    burger: 40,
-    steak: 80
-};
-const STOCK_PACK_SIZE = 5;
 const gameArea = document.getElementById('game-area');
 const money = document.getElementById('money');
 const message = document.getElementById('message-box');
@@ -62,16 +77,18 @@ const buttonBuyTable = document.getElementById('button-buy-table');
 const buttonHireWaiter = document.getElementById('btn-hire-waiter');
 const buttonHireChef = document.getElementById('button-hire-chef');
 const waiterCount = document.getElementById('waiter-count');
-const ChefCount = document.getElementById('chef-count');
+const chefCount = document.getElementById('chef-count');
 const buttonBuyUpgradeMarketing = document.getElementById('button-upgrade-marketing');
 const buttonBuyUpgradeSpeed = document.getElementById('button-upgrade-speed');
 const buttonBuyUpgradeProfit = document.getElementById('button-upgrade-profit')
-const buttonBuySalad = document.getElementById('button-buy-salad');
-const buttonBuyBurger = document.getElementById('button-buy-burger');
-const buttonBuySteak = document.getElementById('button-buy-steak');
-const stockSalad = document.getElementById('stock-salad');
-const stockBurger = document.getElementById('stock-burger');
-const stockSteak = document.getElementById('stock-steak');
+const buttonBuy1 = document.getElementById('button-buy-1');
+const buttonBuy2 = document.getElementById('button-buy-2');
+const buttonBuy3 = document.getElementById('button-buy-3');
+const stock1 = document.getElementById('stock-1');
+const stock2 = document.getElementById('stock-2');
+const stock3 = document.getElementById('stock-3');
+const buttonPrestige = document.getElementById('button-prestige')
+
 function init() {
     if (!loadGame()) {
         updateUI();
@@ -92,6 +109,7 @@ function saveGame() {
         staff: state.staff,
         upgrades: state.upgrades,
         inventory: state.inventory,
+        prestigeLevel: state.prestigeLevel, 
         tables: state.tables.map(t => ({
             id: t.id,
             x: t.x,
@@ -115,6 +133,7 @@ function loadGame() {
         state.staff = savedState.staff;
         state.upgrades = savedState.upgrades;
         state.inventory = savedState.inventory || {salad: 10, burger: 10, steak: 10};
+        state.prestigeLevel = savedState.prestigeLevel || 0;
         state.tables = [];
         savedState.tables.forEach(tableData => {
             const table = {
@@ -127,12 +146,26 @@ function loadGame() {
             createTableElement(table);
             state.tables.push(table);
         });
-        showMessage("Welcome back, game loaded");
+        applyTheme();
         updateUI();
         return true;
     } catch (e) {
         console.error("Save file corrupted", e);
         return false;
+    }
+}
+function triggerPrestige() {
+    if (state.money < 5000) {
+        showMessage("Need $5,000 to expand!");
+        return;
+    }
+    if (confirm("Sell your restaurant to open a better one? You will lose all cash, staff, tables and stock, but gain +50% permanent profits.")) {
+        state.prestigeLevel++;
+        state.money = 200;
+        state.tables = [];
+        state.customers = [];
+        state.staff = {waiters: 0, chefs: 0};
+        state.upgrades = {marketing: false, fastCook: false,};
     }
 }
 function gameLoop(timestamp) {
