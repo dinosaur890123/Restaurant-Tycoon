@@ -73,8 +73,9 @@ const money = document.getElementById('money');
 const message = document.getElementById('message-box');
 const queue = document.getElementById('queue-count');
 const stove = document.getElementById('stove');
+const gameTitle = document.getElementById('game-title');
 const buttonBuyTable = document.getElementById('button-buy-table');
-const buttonHireWaiter = document.getElementById('btn-hire-waiter');
+const buttonHireWaiter = document.getElementById('button-hire-waiter');
 const buttonHireChef = document.getElementById('button-hire-chef');
 const waiterCount = document.getElementById('waiter-count');
 const chefCount = document.getElementById('chef-count');
@@ -165,8 +166,40 @@ function triggerPrestige() {
         state.tables = [];
         state.customers = [];
         state.staff = {waiters: 0, chefs: 0};
-        state.upgrades = {marketing: false, fastCook: false,};
+        state.upgrades = {marketing: false, fastCook: false, highPrice: false};
+        state.inventory = {salad: 10, burger: 10, steak: 10};
+        
+        gameArea.innerHTML = `
+        <div id="kitchen">
+            <div class="kitchen-label">KITCHEN</div>
+            <div class="kitchen-stock">
+                <div id="stock-1" class="stock-item"></div>
+                <div id="stock-2" class="stock-item"></div>
+                <div id="stock-3" class="stock-item"></div>
+            </div>
+            <div id="stove"></div>
+        </div>
+        <div id="staff-area">
+            <div>Waiters: <span id="waiter-count">0</span></div>
+            <div>Chefs: <span id="chef-count">0</span></div>
+        </div>
+        `;
+        saveGame();
+        location.reload();
     }
+}
+function getTheme() {
+    const a = Math.min(state.prestigeLevel, THEMES.length - 1);
+    return THEMES[a];
+}
+function applyTheme() {
+    const theme = getTheme();
+    gameTitle.textContent = theme.name;
+    gameArea.style.backgroundColor = theme.background;
+    gameArea.style.borderColor = theme.border;
+    buttonBuy1.textContent = `Buy ${theme.items[0].name} ($${STOCK_PRICES.salad})`;
+    buttonBuy2.textContent = `Buy ${theme.items[1].name} ($${STOCK_PRICES.burger})`;
+    buttonBuy3.textContent = `Buy ${theme.items[2].name} ($${STOCK_PRICES.steak})`;
 }
 function gameLoop(timestamp) {
     const spawnRate = state.upgrades.marketing ? 1500 : 3000;
@@ -199,17 +232,17 @@ function buyStock() {
     if (state.money >= price) {
         state.money -= price;
         state.inventory[type] += STOCK_PACK_SIZE;
-        showMessage(`Bought ${STOCK_PACK_SIZE} ${type}!`);
         updateUI();
         saveGame();
     } else {
-        showMessage(`Need $${price} for ${type}!`)
+        showMessage(`Need $${price}!`)
     }
 }
 function updateStockDisplay() {
-    stockSalad.textContent = `🥗 ${state.inventory.salad}`;
-    stockBurger.textContent = `🍔 ${state.inventory.burger}`;
-    stockSteak.textContent = `🥩 ${state.inventory.steak}`;
+    const theme = getTheme();
+    stock1.textContent = `${theme.items[0].name}: ${state.inventory.salad}`;
+    stock2.textContent = `${theme.items[1].name}: ${state.inventory.burger}`;
+    stock3.textContent = `${theme.items[2].name}: ${state.inventory.steak}`;
     checkLowStock(stockSalad, state.inventory.salad);
     checkLowStock(stockBurger, state.inventory.burger);
     checkLowStock(stockSteak, state.inventory.steak);
@@ -459,6 +492,8 @@ function collectMoney(customer) {
     if (state.upgrades.highPrice) {
         amount = Math.floor(amount * 1.5);
     }
+    const mult = 1 + (state.prestigeLevel * 0.5);
+    amount = Math.floor(amount * mult);
     state.money += amount;
     spawnFloater(customer.element.style.left, customer.element.style.top, `+$${amount}`);
     updateUI();
@@ -481,9 +516,18 @@ function updateUI() {
     queue.textContent = state.customerQueue;
     waiterCount.textContent = state.staff.waiters;
     chefCount.textContent = state.staff.chefs;
+    const mult = 1 + (state.prestigeLevel * 0.5);
+    prestigeMult.textContent = mult.toFixed(1);
+    updateStockDisplay();
     buttonBuyTable.disabled = state.money < 100;
     buttonHireWaiter.disabled = state.money < 500;
     buttonHireChef.disabled = state.money < 500;
+    buttonPrestige.disableddisabled = state.money < 5000;
+    if (state.money < 5000) buttonPrestige.style.opacity = "0.7";
+    else buttonPrestige.style.opacity = "1";
+    buttonBuy1.disabled = state.money < STOCK_PRICES.salad;
+    buttonBuy2.disabled = state.money < STOCK_PRICES.burger;
+    buttonBuy3.disabled = state.money < STOCK_PRICES.steak;
     updateUpgradeButton(buttonBuyUpgradeMarketing, 'marketing', 600);
     updateUpgradeButton(buttonBuyUpgradeSpeed, 'fastCook', 800);
     updateUpgradeButton(buttonBuyUpgradeProfit, 'highPrice', 1000);
