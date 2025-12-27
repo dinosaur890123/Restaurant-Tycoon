@@ -43,6 +43,7 @@ const THEMES = [
         ]
     }
 ]
+;
 const STOCK_PRICES = {salad: 20, burger: 40, steak: 80};
 const STOCK_PACK_SIZE = 5;
 let state = {
@@ -52,6 +53,7 @@ let state = {
     customerQueue: 0,
     idCounter: 0,
     lastSpawn: 0,
+    prestigeLevel: 0,
     staff: {
         waiters: 0,
         chefs: 0
@@ -89,6 +91,12 @@ const stock1 = document.getElementById('stock-1');
 const stock2 = document.getElementById('stock-2');
 const stock3 = document.getElementById('stock-3');
 const buttonPrestige = document.getElementById('button-prestige')
+const prestigeMult = document.getElementById('prestige-mult');
+
+function getRecipes() {
+    const theme = getTheme();
+    return theme.items.map(item => ({...item, stockKey: item.id}));
+}
 
 function init() {
     if (!loadGame()) {
@@ -119,9 +127,9 @@ function saveGame() {
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveState));
     const originalText = message.textContent;
-    showMessage("Game saved");
+    showMessage("Game saved!");
     setTimeout(() => {
-        if (message.textContent === "Game Saved!") showMessage(originalText);
+        if (message.textContent === "Game saved!") showMessage(originalText);
     }, 2000);
 }
 function loadGame() {
@@ -190,7 +198,9 @@ function triggerPrestige() {
 }
 function getTheme() {
     const a = Math.min(state.prestigeLevel, THEMES.length - 1);
-    return THEMES[a];
+    const theme = THEMES[a];
+    if (!theme.background && theme.bg) return {...theme, background: theme.bg};
+    return theme;
 }
 function applyTheme() {
     const theme = getTheme();
@@ -203,7 +213,7 @@ function applyTheme() {
 }
 function gameLoop(timestamp) {
     const spawnRate = state.upgrades.marketing ? 1500 : 3000;
-    if (timestamp - state.lastSpawn > 3000) {
+    if (timestamp - state.lastSpawn > spawnRate) {
         if (Math.random() > 0.3 && state.customerQueue < 10) {
             state.customerQueue++;
             updateUI();
@@ -227,7 +237,7 @@ function processQueue() {
         }
     }
 }
-function buyStock() {
+function buyStock(type) {
     const price = STOCK_PRICES[type];
     if (state.money >= price) {
         state.money -= price;
@@ -243,9 +253,9 @@ function updateStockDisplay() {
     stock1.textContent = `${theme.items[0].name}: ${state.inventory.salad}`;
     stock2.textContent = `${theme.items[1].name}: ${state.inventory.burger}`;
     stock3.textContent = `${theme.items[2].name}: ${state.inventory.steak}`;
-    checkLowStock(stockSalad, state.inventory.salad);
-    checkLowStock(stockBurger, state.inventory.burger);
-    checkLowStock(stockSteak, state.inventory.steak);
+    checkLowStock(stock1, state.inventory.salad);
+    checkLowStock(stock2, state.inventory.burger);
+    checkLowStock(stock3, state.inventory.steak);
 }
 function checkLowStock(element, amount) {
     if (amount <= 2) element.classList.add('stock-low');
@@ -301,16 +311,16 @@ function runStaffLogic() {
             } else if (customer.status === 'ready_to_order') {
                 const stockType = customer.order.stockKey;
                 if (state.inventory[stockType] > 0) {
-                    handleCustomerClick(cust);
+                    handleCustomerClick(customer);
                     waiterMoves--;
-                    createEffect(cust.element.style.left, cust.element.style.top, "📝");
+                    createEffect(customer.element.style.left, customer.element.style.top, "📝");
                 }
             }
         }
     }
     let chefMoves = state.staff.chefs;
     if (chefMoves > 0) {
-        const readyOrders = Array.from(document.querySelectorAll());
+        const readyOrders = Array.from(document.querySelectorAll('.kitchen-order.order-ready'));
         for (let order of readyOrders) {
             if (chefMoves <= 0) break;
             order.click(); 
@@ -326,7 +336,7 @@ function createEffect(x, y, emoji) {
     element.style.left = x;
     element.style.top = y;
     element.style.fontSize = '20px';
-    element.stylezIndex = '100';
+    element.style.zIndex = '100';
     element.style.pointerEvents = 'none';
     element.textContent = emoji;
     element.style.transition = 'top 1s ease, opacity 1s ease';
@@ -340,6 +350,7 @@ function createEffect(x, y, emoji) {
 }
 function buyTable() {
     if (state.money >= 100) {
+        state.money -= 100;
         const col = state.tables.length % 4;
         const row = Math.floor(state.tables.length / 4);
         const x = 50 + (col * 150);
@@ -374,9 +385,8 @@ function createTableElement(tableData) {
     tableData.element = element;
 }
 function spawnCustomer(table) {
-    const recipeKeys = Object.keys(RECIPES);
-    const randomKey = recipeKeys[Math.floor(Math.random() * recipeKeys.length)];
-    const chosenRecipe = RECIPES[randomKey];
+    const recipes = getRecipes();
+    const chosenRecipe = recipes[Math.floor(Math.random() * recipes.length)];
     const customer = {
         id: `cust-${state.idCounter++}`,
         tableId: table.id,
@@ -408,7 +418,7 @@ function setCustomerState(customer, status) {
     customer.status = status;
     const element = customer.element;
     if (status === 'ready_to_order') {
-        customer.bubble.textContent = `${cust.order.name}?`;
+        customer.bubble.textContent = `${customer.order.name}?`;
         customer.bubble.style.color = customer.order.color;
         customer.bubble.style.borderColor = customer.order.color;
         element.classList.add('needs-attention');
@@ -425,7 +435,7 @@ function setCustomerState(customer, status) {
         customer.bubble.textContent = "yum!";
         element.style.backgroundColor = '#f1c40f';
         setTimeout(() => {
-            setCustomerState(cust, 'ready_to_pay');
+            setCustomerState(customer, 'ready_to_pay');
         }, 4000);
     }
     else if (status === 'ready_to_pay') {
@@ -448,7 +458,7 @@ function handleCustomerClick(customer) {
         }
     }
     else if (customer.status === 'ready_to_pay') {
-        collectMoney(cust);
+        collectMoney(customer);
     }
 }
 function sendOrderToKitchen(customer) {
@@ -463,8 +473,8 @@ function sendOrderToKitchen(customer) {
     const cookTime = state.upgrades.fastCook ? baseTime / 2 : baseTime;
     
     setTimeout(() => {
-        bar.style.width = '100%';
         bar.style.transition = `width ${cookTime / 1000}s linear`;
+        bar.style.width = '100%';
     }, 50);
     
     setTimeout(() => {
@@ -475,7 +485,7 @@ function sendOrderToKitchen(customer) {
             orderElement.remove();
         };
         showMessage(`${customer.order.name} ready!`)
-    }, customer.order.time + 50);
+    }, cookTime + 50);
 }
 function serveFood(customer) {
     if (!state.customers.find(c => c.id === customer.id)) return;
@@ -484,6 +494,8 @@ function serveFood(customer) {
     showMessage("Customer served.")
 }
 function collectMoney(customer) {
+    const x = customer.element.style.left;
+    const y = customer.element.style.top;
     customer.element.remove();
     const table = state.tables.find(t => t.id === customer.tableId);
     if (table) table.occupiedBy = null;
@@ -495,7 +507,7 @@ function collectMoney(customer) {
     const mult = 1 + (state.prestigeLevel * 0.5);
     amount = Math.floor(amount * mult);
     state.money += amount;
-    spawnFloater(customer.element.style.left, customer.element.style.top, `+$${amount}`);
+    spawnFloater(x, y, `+$${amount}`);
     updateUI();
     showMessage(`Collected $${amount}`);
 }
@@ -522,7 +534,7 @@ function updateUI() {
     buttonBuyTable.disabled = state.money < 100;
     buttonHireWaiter.disabled = state.money < 500;
     buttonHireChef.disabled = state.money < 500;
-    buttonPrestige.disableddisabled = state.money < 5000;
+    buttonPrestige.disabled = state.money < 5000;
     if (state.money < 5000) buttonPrestige.style.opacity = "0.7";
     else buttonPrestige.style.opacity = "1";
     buttonBuy1.disabled = state.money < STOCK_PRICES.salad;
