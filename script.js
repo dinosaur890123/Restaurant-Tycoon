@@ -1,6 +1,47 @@
 const GAME_WIDTH = 650;
 const GAME_HEIGHT = 500;
 const STORAGE_KEY = 'restaurant_tycoon_save_v2';
+const DYNAMIC_EVENTS = [
+    {
+        id: 'rushHour',
+        name: 'Dinner rush',
+        description: 'Customers arrive much faster',
+        duration: 20000,
+        effect: {type: 'spawnRate', multiplier: 1.8},
+        announcement: 'Dinner rush! Keep the line moving.'
+    }, {
+        id: 'criticsNight',
+        name: 'Critic visit',
+        description: 'A critic will visit you, earn extra tips!',
+        duration: 18000,
+        effect: {type: 'payout', multiplier: 1.4},
+        announcement: 'A food critic arrived, make sure you deliver perfection!',
+        miniGame: 'quickChop'
+    },
+    {
+        id: 'chefFocus',
+        name: 'Chef Focus',
+        description: 'The kitchen is locked in. Cooking is faster.',
+        duration: 15000,
+        effect: {type: 'cookSpeed', multiplier: 1.5},
+        announcement: 'Chefs found their rhythm—meals cook quicker!'
+    }
+];
+const MINIGAMES = {
+    quickChop: {
+        id: 'quickChop',
+        name: 'Quick Chop',
+        instruction: 'Tap the Chop button 7 times before the timer ends to boost cooking speed!',
+        actionLabel: 'Chop!',
+        clicksRequired: 7,
+        duration: 6000,
+        reward: {type: 'cookSpeed', multiplier: 1.6, duration: 25000},
+        cooldown: 45000,
+        retryDelay: 25000,
+        successMessage: 'Flawless prep! Cooking speed boosted.',
+        failMessage: 'Prep was garbage. No boost this time :('
+    }
+}
 const THEMES = [
     {
         name: "Local bistro",
@@ -68,7 +109,25 @@ let state = {
         burger: 10,
         steak: 10
     },
-    lastStaffAction: 0
+    lastStaffAction: 0,
+    modifiers: {
+        spawnRate: 1,
+        cookSpeed: 1,
+        payout: 1
+    },
+    modifierEffects: [],
+    events: {
+        current: null,
+        nextTrigger: null
+    },
+    miniGame: {
+        active: false,
+        nextOffer: null,
+        type: null,
+        progress: 0,
+        endAt: null,
+        pendingType: null,
+    }
 };
 const gameArea = document.getElementById('game-area');
 const money = document.getElementById('money');
