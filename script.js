@@ -151,6 +151,14 @@ const stock2 = document.getElementById('stock-2');
 const stock3 = document.getElementById('stock-3');
 const buttonPrestige = document.getElementById('button-prestige')
 const prestigeMult = document.getElementById('prestige-mult');
+const hud = document.getElementById('hud');
+let eventBanner = null;
+let miniGameOverlay = null;
+let miniGameTitle = null;
+let miniGameInstruction = null;
+let miniGameProgress = null;
+let miniGameActionButton = null;
+let miniGameCancelButton = null;
 
 function getRecipes() {
     const theme = getTheme();
@@ -158,10 +166,20 @@ function getRecipes() {
 }
 
 function init() {
-    if (!loadGame()) {
+    createDynamicUI();
+    const loaded = loadGame();
+    if (!loaded) {
+        applyTheme();
         updateUI();
+        const now = Date.now();
+        scheduleNextEvent(now);
+        scheduleNextMiniGame(now);
+    } else {
+        const now = Date.now();
+        if (!state.events.nextTrigger) scheduleNextEvent(now);
+        if (!state.miniGame.nextOffer) scheduleNextMiniGame(now);
     }
-    gameLoop();
+    requestAnimationFrame(gameLoop);
     setInterval(saveGame, 10000);
 }
 function resetGame() {
@@ -171,6 +189,7 @@ function resetGame() {
     }
 }
 function saveGame() {
+    cleanupModifiers(Date.now());
     const saveState = {
         money: state.money,
         idCounter: state.idCounter,
@@ -182,7 +201,10 @@ function saveGame() {
             id: t.id,
             x: t.x,
             y: t.y
-        }))
+        })),
+        modifierEffects: state.modifierEffects,
+        events: state.events,
+        miniGame: {nextOffer: state.miniGame.nextOffer}
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saveState));
     const originalText = message.textContent;
@@ -202,18 +224,38 @@ function loadGame() {
         state.upgrades = savedState.upgrades;
         state.inventory = savedState.inventory || {salad: 10, burger: 10, steak: 10};
         state.prestigeLevel = savedState.prestigeLevel || 0;
-        state.tables = [];
-        savedState.tables.forEach(tableData => {
-            const table = {
-                id: tableData.id,
-                x: tableData.x,
-                y: tableData.y,
-                occupiedBy: null,
-                element: null
-            };
-            createTableElement(table);
-            state.tables.push(table);
-        });
+        state.modifierEffects = savedState.modifierEffects || [];
+        recalcModifiers();
+        cleanupModifiers(Date.now());
+        state.events = savedState.events || {current: null, nextTrigger: null};
+        const now = Date.now();
+        if (state.events.current) {
+            const eventDef = DYNAMIC_EVENTS.find(e => e.id === state.events.current.id);
+            if (!eventDef || now >= state.events.current.endAt) {
+                state.events.current = null;
+            } else {
+                showEventBanner(eventDef);
+                if (!state.modifierEffects.find(mod => mod.id === `event-${eventDef.id}`) && eventDef.effect) {
+                    activateModifier({
+                        id: `event-${eventDef.id}`,
+                        type: eventDef.effect.type,
+                        multiplier: eventDef.effect.multiplier,
+                        expiresAt: state.events.current.endAt
+                    });
+                }
+            }
+        }
+        if (!state.events.nextTrigger || state.events.nextTrigger < now) scheduleNextEvent(now);
+        const savedMiniGame = savedState.miniGame || {};
+        state.miniGame = {
+            active: false,
+            nextOffer: savedMiniGame.nextOffer || null,
+            type: null,
+            progress: 0,
+            endAt: null,
+            pendingType: null
+        };
+        if (!state.miniGame.nextOffer || state.miniGame.nextOffer < now) scheduleNextMiniGame(now);
         applyTheme();
         updateUI();
         return true;
@@ -235,6 +277,19 @@ function triggerPrestige() {
         state.staff = {waiters: 0, chefs: 0};
         state.upgrades = {marketing: false, fastCook: false, highPrice: false};
         state.inventory = {salad: 10, burger: 10, steak: 10};
+        state.modifiers = {spawnRate: 1, cookSpeed: 1, payout: 1};
+        state.modifierEffects = [];
+        state.events = {current: null, nextTrigger: Date.now() + getRandomInt(20000, 35000)};
+        state.miniGame = {
+            active: false,
+            nextOffer: Date.now() + getRandomInt(35000, 50000),
+            type: null,
+            progress: 0,
+            endAt: null,
+            pendingType: null
+        };
+        hideEventBanner();
+        if (miniGameOverlay) miniGameOverlay.style.display = 'none';
         
         gameArea.innerHTML = `
         <div id="kitchen">
@@ -271,7 +326,12 @@ function applyTheme() {
     buttonBuy3.textContent = `Buy ${theme.items[2].name} ($${STOCK_PRICES.steak})`;
 }
 function gameLoop(timestamp) {
-    const spawnRate = state.upgrades.marketing ? 1500 : 3000;
+    const now = Date.now();
+    cleanupModifiers(now);
+    handleEvents(now);
+    handleMiniGames(now);
+    const baseSpawnRate = state.upgrades.marketing ? 1500 : 3000;
+    const spawnRate = baseSpawnRate / Math.max(state.modifiers.spawnRate, 0.1);
     if (timestamp - state.lastSpawn > spawnRate) {
         if (Math.random() > 0.3 && state.customerQueue < 10) {
             state.customerQueue++;
@@ -529,7 +589,8 @@ function sendOrderToKitchen(customer) {
     const bar = orderElement.querySelector('.progress-bar');
     bar.style.backgroundColor = customer.order.color;
     const baseTime = customer.order.time;
-    const cookTime = state.upgrades.fastCook ? baseTime / 2 : baseTime;
+    const cookModifier = Math.max(state.modifiers.cookSpeed, 0.1);
+    const cookTime = (state.upgrades.fastCook ? baseTime / 2 : baseTime) / cookModifier;
     
     setTimeout(() => {
         bar.style.transition = `width ${cookTime / 1000}s linear`;
@@ -564,7 +625,7 @@ function collectMoney(customer) {
         amount = Math.floor(amount * 1.5);
     }
     const mult = 1 + (state.prestigeLevel * 0.5);
-    amount = Math.floor(amount * mult);
+    amount = Math.floor(amount * mult * Math.max(state.modifiers.payout, 0.1));
     state.money += amount;
     spawnFloater(x, y, `+$${amount}`);
     updateUI();
@@ -581,6 +642,220 @@ function spawnFloater(x, y, text) {
 }
 function showMessage(text) {
     message.textContent = text;
+}
+function createDynamicUI() {
+    if (!eventBanner) {
+        eventBanner = document.createElement('div');
+        eventBanner.id = 'event-banner';
+        eventBanner.textContent = '';
+        eventBanner.style.display = 'none';
+        hud.insertAdjacentElement('afterend', eventBanner);
+    }
+    if (!miniGameOverlay) {
+        miniGameOverlay = document.createElement('div');
+        miniGameOverlay.id = 'minigame-overlay';
+        miniGameOverlay.innerHTML = `
+        <div class="minigame-panel">
+            <h2 class="minigame-title"></h2>
+            <p class="minigame-instruction"></p>
+            <div class="minigame-progress"></div>
+            <button class="minigame-action">${MINIGAMES.quickChop.actionLabel}</button>
+            <button class="minigame-cancel">Skip</button>
+        </div>
+        `;
+        document.body.appendChild(miniGameOverlay);
+        miniGameTitle = miniGameOverlay.querySelector('.minigame-title');
+        miniGameInstruction = miniGameOverlay.querySelector('.minigame-instruction');
+        miniGameProgress = miniGameOverlay.querySelector('.minigame-progress');
+        miniGameActionButton = miniGameOverlay.querySelector('.minigame-action');
+        miniGameCancelButton = miniGameOverlay.querySelector('.minigame-cancel');
+        miniGameOverlay.style.display = 'none';
+        miniGameCancelButton.onclick = () => completeMiniGame(false, {reason: 'skip'});
+        miniGameOverlay.addEventListener('click', (evt) => {
+            if (evt.target === miniGameOverlay && state.miniGame.active) {
+                completeMiniGame(false, {reason: 'skip'});
+            }
+        })
+    }
+}
+function showEventBanner(eventDef) {
+    if (!eventBanner) return;
+    eventBanner.textContent = `${eventDef.name}: ${eventDef.description}`;
+    eventBanner.style.display = 'block';
+    requestAnimationFrame(() => eventBanner.classList.add('visible'));
+}
+function hideEventBanner() {
+    if (!eventBanner) return;
+    eventBanner.classList.remove('visible');
+    setTimeout(() => {
+        if (!eventBanner.classList.contains('visible')) eventBanner.style.display = 'none';
+    }, 250);
+}
+function scheduleNextEvent(baseTime) {
+    state.events.nextTrigger = baseTime + getRandomInt(20000, 35000);
+}
+function scheduleNextMiniGame(baseTime) {
+    state.miniGame.nextOffer = baseTime + getRandomInt(35000, 50000);
+}
+function handleEvents(now) {
+    if (state.events.current) {
+        const eventDef = DYNAMIC_EVENTS.find(e => e.id === state.events.current.id);
+        if (!eventDef || now >= state.events.current.endAt) {
+            if (eventDef) deactivateModifier(`event-${eventDef.id}`);
+            state.events.current = null;
+            hideEventBanner();
+            if (!state.events.nextTrigger || state.events.nextTrigger < now) scheduleNextEvent(now);
+        }
+        return;
+    }
+    if (!state.events.nextTrigger) {
+        scheduleNextEvent(now);
+        return;
+    }
+    if (now >= state.events.nextTrigger) {
+        triggerRandomEvent(now);
+    }
+}
+function triggerRandomEvent() {
+    const eventDef = DYNAMIC_EVENTS[Math.floor(Math.random() * DYNAMIC_EVENTS.length)];
+    if (!eventDef) return;
+    state.events.current = {
+        id: eventDef.id,
+        endAt: now + eventDef.duration
+    };
+    showEventBanner(eventDef);
+    showMessage(eventDef.announcement);
+    if (eventDef.effect) {
+        activateModifier({
+            id: `event-${eventDef.id}`,
+            type: eventDef.effect.type,
+            multiplier: eventDef.effect.multiplier,
+            expiresAt: state.events.current.endAt
+        });
+    }
+    scheduleNextEvent(state.events.current.endAt);
+    if (eventDef.miniGame) {
+        queueMiniGame(eventDef.miniGame, now + 800);
+    }
+}
+function handleMiniGames(now) {
+    if (state.miniGame.active) {
+        const config = MINIGAMES[state.miniGame.type];
+        if (!config) {
+            state.miniGame.active = false;
+            scheduleNextMiniGame(now);
+            return;
+        }
+        if (now >= state.miniGame.endAt) {
+            completeMiniGame(false);
+            return;
+        }
+        refreshMiniGameUI(config, now);
+        return;
+    }
+    if (!state.miniGame.nextOffer) {
+        scheduleNextMiniGame(now);
+        return;
+    }
+    if (now >= state.miniGame.nextOffer) {
+        const type = state.miniGame.pendingType || 'quickChop';
+        if (MINIGAMES[type]) startMiniGame(type);
+        else scheduleNextMiniGame(now);
+    }
+}
+function queueMiniGame(type, targetTime) {
+    if (state.miniGame.active) return;
+    state.miniGame.pendingType = type;
+    state.miniGame.nextOffer = targetTime;
+}
+function startMiniGame(type) {
+    const config = MINIGAMES[type];
+    if (!config || !miniGameOverlay) return;
+    state.miniGame.active = true;
+    state.miniGame.type = type;
+    state.miniGame.progress = 0;
+    state.miniGame.endAt = Date.now() + config.duration;
+    state.miniGame.pendingType = null;
+    miniGameTitle.textContent = config.name;
+    miniGameInstruction.textContent = config.instruction;
+    refreshMiniGameUI(config, Date.now());
+    miniGameActionButton.textContent = config.actionLabel;
+    miniGameActionButton.onclick = () => {
+        if (!state.miniGame.active) return;
+        state.miniGame.progress++;
+        if (state.miniGame.progress >= config.clicksRequired) {
+            completeMiniGame(true);
+        } else {
+            refreshMiniGameUI(config, Date.now());
+        }
+    };
+    miniGameOverlay.style.display = 'flex';
+}
+function refreshMiniGameUI(config, now) {
+    if (!miniGameProgress) return;
+    const remaining = Math.max(0, state.miniGame.endAt - now);
+    miniGameProgress.textContent = `${state.miniGame.progress}/${config.clicksRequired} • ${(remaining / 1000).toFixed(1)}s`;
+}
+function completeMiniGame(success, options = {}) {
+    if (!state.miniGame.active && !options.reason) return;
+    const config = MINIGAMES[state.miniGame.type || 'quickChop'];
+    if (miniGameOverlay) miniGameOverlay.style.display = 'none';
+    if (miniGameActionButton) miniGameActionButton.onclick = null;
+    if (miniGameProgress) miniGameProgress.textContent = '';
+    const now = Date.now();
+    if (success && config) {
+        activateModifier({
+            id: `minigame-${config.id}`,
+            type: config.reward.type,
+            multiplier: config.reward.multiplier,
+            expiresAt: now + config.reward.duration
+        });
+        showMessage(config.successMessage);
+        state.miniGame.nextOffer = now + config.cooldown;
+    } else {
+        if (config) state.miniGame.nextOffer = now + (config.retryDelay || config.cooldown);
+        if (options.reason === 'skip') showMessage("Mini-game skipped.");
+        else if (config) showMessage(config.failMessage);
+    }
+    state.miniGame.active = false;
+    state.miniGame.type = null;
+    state.miniGame.progress = 0;
+    state.miniGame.endAt = null;
+    state.miniGame.pendingType = null;
+}
+function activateModifier(effect) {
+    if (!effect || !effect.type || !effect.multiplier) return;
+    if (!effect.expiresAt) effect.expiresAt = Date.now() + 15000;
+    state.modifierEffects = state.modifierEffects.filter(mod => mod.id !== effect.id);
+    state.modifierEffects.push(effect);
+    recalcModifiers();
+}
+function deactivateModifier(id) {
+    const before = state.modifierEffects.length;
+    state.modifierEffects = state.modifierEffects.filter(mod => mod.id !== id);
+    if (state.modifierEffects.length !== before) recalcModifiers();
+}
+function cleanupModifiers(now) {
+    const before = state.modifierEffects.length;
+    state.modifierEffects = state.modifierEffects.filter(mod => !mod.expiresAt || now < mod.expiresAt);
+    if (state.modifierEffects.length !== before) recalcModifiers();
+}
+function recalcModifiers() {
+    state.modifiers.spawnRate = state.modifierEffects
+        .filter(mod => mod.type === 'spawnRate')
+        .reduce((acc, mod) => acc * mod.multiplier, 1);
+    state.modifiers.cookSpeed = state.modifierEffects
+        .filter(mod => mod.type === 'cookSpeed')
+        .reduce((acc, mod) => acc * mod.multiplier, 1);
+    state.modifiers.payout = state.modifierEffects
+        .filter(mod => mod.type === 'payout')
+        .reduce((acc, mod) => acc * mod.multiplier, 1);
+    if (!state.modifiers.spawnRate) state.modifiers.spawnRate = 1;
+    if (!state.modifiers.cookSpeed) state.modifiers.cookSpeed = 1;
+    if (!state.modifiers.payout) state.modifiers.payout = 1;
+}
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 function updateUI() {
     money.textContent = state.money;
