@@ -152,6 +152,7 @@ const stock3 = document.getElementById('stock-3');
 const buttonPrestige = document.getElementById('button-prestige')
 const prestigeMult = document.getElementById('prestige-mult');
 const hud = document.getElementById('hud');
+const topAlert = document.getElementById('top-alert');
 let eventBanner = null;
 let miniGameOverlay = null;
 let miniGameTitle = null;
@@ -159,6 +160,7 @@ let miniGameInstruction = null;
 let miniGameProgress = null;
 let miniGameActionButton = null;
 let miniGameCancelButton = null;
+let topAlertTimeout = null;
 
 function getRecipes() {
     const theme = getTheme();
@@ -288,6 +290,7 @@ function triggerPrestige() {
             endAt: null,
             pendingType: null
         };
+        state.alerts = {lowStock: {salad: false, burger: false, steak: false}};
         hideEventBanner();
         if (miniGameOverlay) miniGameOverlay.style.display = 'none';
         
@@ -372,13 +375,24 @@ function updateStockDisplay() {
     stock1.textContent = `${theme.items[0].name}: ${state.inventory.salad}`;
     stock2.textContent = `${theme.items[1].name}: ${state.inventory.burger}`;
     stock3.textContent = `${theme.items[2].name}: ${state.inventory.steak}`;
-    checkLowStock(stock1, state.inventory.salad);
-    checkLowStock(stock2, state.inventory.burger);
-    checkLowStock(stock3, state.inventory.steak);
+    checkLowStock('salad', stock1, state.inventory.salad, theme.items[0].name);
+    checkLowStock('burger', stock2, state.inventory.burger, theme.items[1].name);
+    checkLowStock('steak', stock3, state.inventory.steak, theme.items[2].name);
 }
 function checkLowStock(element, amount) {
-    if (amount <= 2) element.classList.add('stock-low');
-    else element.classList.remove('stock-low');
+    if (amount <= 2) {
+        element.classList.add('stock-low');
+        if (!state.alerts.lowStock[type]) {
+            showTopAlert(`${label} stock is running low!`);
+            state.alerts.lowStock[type] = true;
+        }
+    }
+    else {
+        element.classList.remove('stock-low');
+        if (state.alerts.lowStock[type]) {
+            state.alerts.lowStock[type] = false;
+        }
+    }
 }
 function buyUpgrade(type) {
     let cost = 0;
@@ -645,6 +659,22 @@ function spawnFloater(x, y, text) {
 function showMessage(text) {
     message.textContent = text;
 }
+function showTopAlert(text, options = {}) {
+    if (!topAlert) return;
+    const duration = options.duration || 4500;
+    if (topAlertTimeout) clearTimeout(topAlertTimeout);
+    topAlert.textContent = text;
+    topAlert.style.display = 'block';
+    requestAnimationFrame(() => topAlert.classList.add('visible'));
+    topAlertTimeout = setTimeout(() => {
+        topAlert.classList.remove('visible');
+        setTimeout(() => {
+            if (!topAlert.classList.contains('visible')) {
+                topAlert.style.display = 'none';
+            }
+        }, 300);
+    }, duration);
+}
 function createDynamicUI() {
     if (!eventBanner) {
         eventBanner = document.createElement('div');
@@ -718,7 +748,7 @@ function handleEvents(now) {
         triggerRandomEvent(now);
     }
 }
-function triggerRandomEvent() {
+function triggerRandomEvent(now) {
     const eventDef = DYNAMIC_EVENTS[Math.floor(Math.random() * DYNAMIC_EVENTS.length)];
     if (!eventDef) return;
     state.events.current = {
@@ -737,6 +767,9 @@ function triggerRandomEvent() {
     }
     scheduleNextEvent(state.events.current.endAt);
     if (eventDef.miniGame) {
+        queueMiniGame(eventDef.miniGame, now + 800);
+    }
+    if (eventDef.minigame) {
         queueMiniGame(eventDef.miniGame, now + 800);
     }
 }

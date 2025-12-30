@@ -342,3 +342,28 @@ button:disabled {
 .minigame-panel .minigame-cancel:hover {
     background-color: #7f8c8d;
 }
+#top-alert {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translate(-50%, -12px);
+    width: 320px;
+    max-width: 90%;
+    background: #fff3cd;
+    color: #7a5b00;
+    padding: 10px 16px;
+    border: 1px solid #f6b93b;
+    border-radius: 6px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    font-weight: 600;
+    text-align: center;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 300
+}
+#top-alert.visible {
+    display: block;
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
