@@ -127,7 +127,8 @@ let state = {
         progress: 0,
         endAt: null,
         pendingType: null,
-    }
+    },
+    alerts: {lowStock: {salad: false, burger: false, steak: false}}
 };
 const gameArea = document.getElementById('game-area');
 const money = document.getElementById('money');
@@ -225,6 +226,7 @@ function loadGame() {
         state.staff = savedState.staff;
         state.upgrades = savedState.upgrades;
         state.inventory = savedState.inventory || {salad: 10, burger: 10, steak: 10};
+        state.alerts = savedState.alerts || {lowStock: {salad: false, burger: false, steak: false}};
         state.prestigeLevel = savedState.prestigeLevel || 0;
         state.modifierEffects = savedState.modifierEffects || [];
         recalcModifiers();
@@ -379,15 +381,14 @@ function updateStockDisplay() {
     checkLowStock('burger', stock2, state.inventory.burger, theme.items[1].name);
     checkLowStock('steak', stock3, state.inventory.steak, theme.items[2].name);
 }
-function checkLowStock(element, amount) {
+function checkLowStock(type, element, amount, label) {
     if (amount <= 2) {
         element.classList.add('stock-low');
         if (!state.alerts.lowStock[type]) {
             showTopAlert(`${label} stock is running low!`);
             state.alerts.lowStock[type] = true;
         }
-    }
-    else {
+    } else {
         element.classList.remove('stock-low');
         if (state.alerts.lowStock[type]) {
             state.alerts.lowStock[type] = false;
