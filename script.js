@@ -383,9 +383,9 @@ function checkLowStock(element, amount) {
 function buyUpgrade(type) {
     let cost = 0;
     let name = "";
-    if (type === 'marketing') {cost = 600; name = "Marketing";}
-    else if (type === 'fastCook') {cost = 800; name = "Faster cooking";}
-    else if (type === 'highPrice') {cost = 1000; name = "Premium Menu";}
+    if (type === 'marketing') {cost = 450; name = "Marketing";}
+    else if (type === 'fastCook') {cost = 650; name = "Faster cooking";}
+    else if (type === 'highPrice') {cost = 850; name = "Premium Menu";}
     if (state.money >= cost && !state.upgrades[type]) {
         state.money -= cost;
         state.upgrades[type] = true;
@@ -398,23 +398,25 @@ function buyUpgrade(type) {
     }
 }
 function hireWaiter() {
-    if (state.money >= 500) {
-        state.money -= 500;
+    const hireCost = 400;
+    if (state.money >= hireCost) {
+        state.money -= hireCost;
         state.staff.waiters++;
         showMessage("Waiter hired, they will take orders and collect cash.");
         updateUI();
     } else {
-        showMessage("Need $500 to hire a waiter!")
+        showMessage(`Need $${hireCost} to hire a waiter!`)
     }
 }
 function hireChef() {
-    if (state.money >= 500) {
-        state.money -= 500;
+    const hireCost = 400;
+    if (state.money >= hireCost) {
+        state.money -= hireCost;
         state.staff.chefs++;
         showMessage("Chef hired, they will serve ready food.");
         updateUI();
     } else {
-        showMessage("Need $500 to hire a chef");
+        showMessage(`Need $${hireCost} to hire a chef`);
     }
 }
 function runStaffLogic() {
@@ -866,17 +868,17 @@ function updateUI() {
     prestigeMult.textContent = mult.toFixed(1);
     updateStockDisplay();
     buttonBuyTable.disabled = state.money < 100;
-    buttonHireWaiter.disabled = state.money < 500;
-    buttonHireChef.disabled = state.money < 500;
+    buttonHireWaiter.disabled = state.money < 400;
+    buttonHireChef.disabled = state.money < 400;
     buttonPrestige.disabled = state.money < 5000;
     if (state.money < 5000) buttonPrestige.style.opacity = "0.7";
     else buttonPrestige.style.opacity = "1";
     buttonBuy1.disabled = state.money < STOCK_PRICES.salad;
     buttonBuy2.disabled = state.money < STOCK_PRICES.burger;
     buttonBuy3.disabled = state.money < STOCK_PRICES.steak;
-    updateUpgradeButton(buttonBuyUpgradeMarketing, 'marketing', 600);
-    updateUpgradeButton(buttonBuyUpgradeSpeed, 'fastCook', 800);
-    updateUpgradeButton(buttonBuyUpgradeProfit, 'highPrice', 1000);
+    updateUpgradeButton(buttonBuyUpgradeMarketing, 'marketing', 450);
+    updateUpgradeButton(buttonBuyUpgradeSpeed, 'fastCook', 650);
+    updateUpgradeButton(buttonBuyUpgradeProfit, 'highPrice', 850);
 }
 function updateUpgradeButton(button, type, cost) {
     if (state.upgrades[type]) {
